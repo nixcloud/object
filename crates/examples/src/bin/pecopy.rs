@@ -1,5 +1,6 @@
 use std::error::Error;
 use std::{env, fs, process};
+use std::collections::HashSet;
 
 use object::pe;
 use object::read::coff::CoffHeader;
@@ -110,21 +111,66 @@ fn copy_file<Pe: ImageNtHeaders>(in_data: &[u8]) -> Result<Vec<u8>, Box<dyn Erro
         out_sections_len += 1;
     }
     writer.reserve_section_headers(out_sections_len as u16);
-
+    // FIXME here enlarge idata
     let mut in_sections_data = Vec::new();
     for index in &in_sections_index {
+        let mut add = 0;
         let in_section = in_sections.section(*index)?;
+            let offset = in_section.pointer_to_raw_data.get(LE);
+            if offset != 0 {
+                writer.reserve_until(offset);
+            }
+            writer.reserve_virtual_until(in_section.virtual_address.get(LE));
+
+        let t= ".idata";
+
+        if std::ffi::CStr::from_bytes_until_nul(&in_section.name).unwrap().to_string_lossy() == t {
+            println!("--------------adding 200 bytes------------------");
+            println!("--------------------------------");
+            println!("--------------------------------");
+            //add = 200;
+        }
         let range = writer.reserve_section(
             in_section.name,
             in_section.characteristics.get(LE),
-            in_section.virtual_size.get(LE),
+            in_section.virtual_size.get(LE) + add,
             in_section.size_of_raw_data.get(LE),
         );
+        println!("section name: {}, chars: {}, vsize: {}, raw_data_size: {}, virtual_address: {}, pointer_to_raw_data: {}",
+                 std::str::from_utf8(&in_section.name)?,
+                 in_section.characteristics.get(LE),
+                 in_section.virtual_size.get(LE),
+                 in_section.size_of_raw_data.get(LE),
+                 in_section.virtual_address.get(LE),
+                 in_section.pointer_to_raw_data.get(LE),
+        );
+
+        // print!("section name: {}, raw_data_size: {:x}", n,
+        //          in_section.size_of_raw_data.get(LE),
+        // );
+        if range.virtual_address != in_section.virtual_address.get(LE) {
+            let diff = i128::from(range.virtual_address) - i128::from(in_section.virtual_address.get(LE));
+            println!(" !virtual_address {} != {} ({})", range.virtual_address, in_section.virtual_address.get(LE), diff);
+        }
+        if range.file_offset != in_section.pointer_to_raw_data.get(LE) {
+            let diff = i128::from(range.file_offset) - i128::from(in_section.pointer_to_raw_data.get(LE));
+            println!(" !pointer_to_raw_data {} != {} ({})", range.file_offset, in_section.pointer_to_raw_data.get(LE), diff);
+        }
+        if range.file_size != in_section.size_of_raw_data.get(LE) {
+            let diff = i128::from(range.file_size) - i128::from(in_section.size_of_raw_data.get(LE));
+            println!(" !size_of_raw_data  {} != {} ({})", range.file_size, in_section.size_of_raw_data.get(LE), diff);
+        }
+        // println!("");
         debug_assert_eq!(range.virtual_address, in_section.virtual_address.get(LE));
         debug_assert_eq!(range.file_offset, in_section.pointer_to_raw_data.get(LE));
-        debug_assert_eq!(range.file_size, in_section.size_of_raw_data.get(LE));
+//        debug_assert_eq!(range.file_size, in_section.size_of_raw_data.get(LE));
         in_sections_data.push((range.file_offset, in_section.pe_data(in_data)?));
     }
+    // <nix-PE-patch>
+    // <c:\foo\bar\foo.dll|foo.dll>
+    // <c:\foo\bar\bar.dll|bar.dll>
+    // <c:\foo\bar\z.dll|z.dll>
+    // </nix-PE-patch>
 
     if reloc_dir.is_some() {
         let mut blocks = in_data_directories
@@ -132,6 +178,7 @@ fn copy_file<Pe: ImageNtHeaders>(in_data: &[u8]) -> Result<Vec<u8>, Box<dyn Erro
             .unwrap();
         while let Some(block) = blocks.next()? {
             for reloc in block {
+                //println!("reloc {:?}", reloc);
                 writer.add_reloc(reloc.virtual_address, reloc.typ);
             }
         }

@@ -16,6 +16,7 @@ pub struct ImportTable<'data> {
     section_data: Bytes<'data>,
     section_address: u32,
     import_address: u32,
+    section_offset: u32,
 }
 
 impl<'data> ImportTable<'data> {
@@ -28,11 +29,12 @@ impl<'data> ImportTable<'data> {
     /// `section_data` should be from the section containing `import_address`, and
     /// `section_address` should be the address of that section. Pointers within the
     /// descriptors and thunks may point to anywhere within the section data.
-    pub fn new(section_data: &'data [u8], section_address: u32, import_address: u32) -> Self {
+    pub fn new(section_data: &'data [u8], section_address: u32, import_address: u32, section_offset: u32) -> Self {
         ImportTable {
             section_data: Bytes(section_data),
             section_address,
             import_address,
+            section_offset,
         }
     }
 
@@ -49,10 +51,32 @@ impl<'data> ImportTable<'data> {
     ///
     /// This address may be from [`pe::ImageImportDescriptor::name`].
     pub fn name(&self, address: u32) -> Result<&'data [u8]> {
+        let z: usize = address.wrapping_sub(self.section_address) as usize;
+        // println!("IN z {:0x}", z);
         self.section_data
-            .read_string_at(address.wrapping_sub(self.section_address) as usize)
+            .read_string_at(z)
             .read_error("Invalid PE import descriptor name")
     }
+
+    /// Return a library name's absolute address given its address.
+    pub fn name_address(&self, address: u32) -> u32 {
+        // println!("section_address {:0x}", self.section_address);
+        // println!("import_address {:0x}", self.import_address);
+        // println!("address {:0x}", address);
+
+        // let offset = self.import_address.wrapping_sub(self.section_address);
+        // println!("offset: {:0x}", offset);
+
+        let z: u32 = address.wrapping_sub(self.section_address) as u32;
+        // println!("z {:0x}", z);
+        z
+    }
+
+    /// FIXME Return the absolute section_offset of the ImportTable
+    pub fn section_offset(&self) -> u32 {
+        self.section_offset
+    }
+
 
     /// Return a list of thunks given its address.
     ///

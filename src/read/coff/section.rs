@@ -16,7 +16,9 @@ use super::{CoffFile, CoffHeader, CoffRelocationIterator};
 /// Returned by [`CoffHeader::sections`] and
 /// [`ImageNtHeaders::sections`](crate::read::pe::ImageNtHeaders::sections).
 #[derive(Debug, Default, Clone, Copy)]
-pub struct SectionTable<'data> {
+pub struct SectionTable<'data>
+
+{
     sections: &'data [pe::ImageSectionHeader],
 }
 

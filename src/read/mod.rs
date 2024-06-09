@@ -125,7 +125,9 @@ impl std::error::Error for Error {}
 /// The result type used within the read module.
 pub type Result<T> = result::Result<T, Error>;
 
-trait ReadError<T> {
+/// FIXME asdf
+pub trait ReadError<T> {
+    /// FIXME asdf
     fn read_error(self, error: &'static str) -> Result<T>;
 }
 

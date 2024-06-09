@@ -2969,7 +2969,19 @@ pub struct ImageCor20Header {
     pub managed_native_header: ImageDataDirectory,
 }
 
+
+
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct FixPathHeader {
+    pub version: U32<LE>,
+    pub fix_path_size: U32<LE>,
+    pub idata_name_table_size: U32<LE>,
+    pub didata_name_table_size: U32<LE>,
+}
+
 unsafe_impl_pod!(
+    FixPathHeader,
     ImageDosHeader,
     ImageOs2Header,
     ImageVxdHeader,
