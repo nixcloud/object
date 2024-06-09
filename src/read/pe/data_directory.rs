@@ -105,10 +105,11 @@ impl<'data> DataDirectories<'data> {
             None => return Ok(None),
         };
         let import_va = data_dir.virtual_address.get(LE);
-        let (section_data, section_va) = sections
+        //println!("import_va {:0x}", import_va);
+        let (section_data, section_va, section_offset) = sections
             .pe_data_containing(data, import_va)
             .read_error("Invalid import data dir virtual address")?;
-        Ok(Some(ImportTable::new(section_data, section_va, import_va)))
+        Ok(Some(ImportTable::new(section_data, section_va, import_va, section_offset)))
     }
 
     /// Returns the partially parsed delay-load import directory.
@@ -124,7 +125,7 @@ impl<'data> DataDirectories<'data> {
             None => return Ok(None),
         };
         let import_va = data_dir.virtual_address.get(LE);
-        let (section_data, section_va) = sections
+        let (section_data, section_va, _) = sections
             .pe_data_containing(data, import_va)
             .read_error("Invalid import data dir virtual address")?;
         Ok(Some(DelayLoadImportTable::new(
@@ -165,6 +166,25 @@ impl<'data> DataDirectories<'data> {
         let rsrc_data = data_dir.data(data, sections)?;
         Ok(Some(ResourceDirectory::new(rsrc_data)))
     }
+
+    // /// Returns the fixPath directory.
+    // ///
+    // /// `data` must be the entire file data.
+    // pub fn fix_path_section<R: ReadRef<'data>>(
+    //     &self,
+    //     data: R,
+    //     sections: &SectionTable<'data>,
+    // ) -> Result<Option<FixPathSection<'data>>> {
+    //     let data_dir = match self.get(pe::IMAGE_DIRECTORY_ENTRY_IMPORT) {
+    //         Some(data_dir) => data_dir,
+    //         None => return Ok(None),
+    //     };
+    //     let import_va = data_dir.virtual_address.get(LE);
+    //     let (section_data, section_va) = sections
+    //         .pe_data_containing(data, import_va)
+    //         .read_error("Invalid import data dir virtual address")?;
+    //     Ok(Some(ImportTable::new(section_data, section_va, import_va)))
+    // }
 }
 
 impl pe::ImageDataDirectory {

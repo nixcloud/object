@@ -359,7 +359,7 @@ impl<'data> SectionTable<'data> {
         &self,
         data: R,
         va: u32,
-    ) -> Option<(&'data [u8], u32)> {
+    ) -> Option<(&'data [u8], u32, u32)> {
         self.iter()
             .find_map(|section| section.pe_data_containing(data, va))
     }
@@ -443,16 +443,19 @@ impl pe::ImageSectionHeader {
         &self,
         data: R,
         va: u32,
-    ) -> Option<(&'data [u8], u32)> {
+    ) -> Option<(&'data [u8], u32, u32)> {
         let section_va = self.virtual_address.get(LE);
+        // println!("---- section_va {:0x}", section_va);
         let offset = va.checked_sub(section_va)?;
+        // println!("---- offset {:0x}", offset);
         let (section_offset, section_size) = self.pe_file_range();
+        // println!("---- section_offset {:0x}", section_offset);
         // Address must be within section (and not at its end).
         if offset < section_size {
             let section_data = data
                 .read_bytes_at(section_offset.into(), section_size.into())
                 .ok()?;
-            Some((section_data, section_va))
+            Some((section_data, section_va, section_offset))
         } else {
             None
         }
