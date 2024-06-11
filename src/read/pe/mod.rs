@@ -63,6 +63,11 @@ mod resource;
 pub use resource::*;
 
 mod rich;
+
+/// bar
+pub mod fixpath;
+pub use fixpath::*;
+
 pub use rich::*;
 
 pub use super::coff::{SectionTable, SymbolTable};
